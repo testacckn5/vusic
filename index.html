@@ -173,7 +173,7 @@
         const CLIENT_ID = '3e44756a158e487eb31540648769226f';
         const REDIRECT_URI = 'https://testacckn5.github.io/vusic/';
         const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
-        const RESPONSE_TYPE = "token";
+        const RESPONSE_TYPE = "token"; // Must be "token" for Implicit Grant
         const SCOPES = "user-read-private user-read-email";
 
         // State
@@ -200,13 +200,24 @@
                 if (accessToken) {
                     window.location.hash = ""; // Clean URL
                     onLoggedIn();
+                } else if (params.get('error')) {
+                    viewTitle.innerText = "Auth Error: " + params.get('error');
+                    console.error("Spotify Auth Error:", params.get('error'));
                 }
             }
         });
 
         // Login Logic
         loginBtn.addEventListener('click', () => {
-            window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=${RESPONSE_TYPE}&scope=${encodeURIComponent(SCOPES)}`;
+            // Re-constructing query strictly to avoid "unsupported_response_type"
+            const url = new URL(AUTH_ENDPOINT);
+            url.searchParams.append('client_id', CLIENT_ID);
+            url.searchParams.append('redirect_uri', REDIRECT_URI);
+            url.searchParams.append('response_type', 'token'); // Explicitly set
+            url.searchParams.append('scope', SCOPES);
+            url.searchParams.append('show_dialog', 'true');
+            
+            window.location.href = url.toString();
         });
 
         function onLoggedIn() {
@@ -239,10 +250,14 @@
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
                 const data = await response.json();
-                displayTracks(data.tracks.items);
+                if (data.tracks && data.tracks.items) {
+                    displayTracks(data.tracks.items);
+                } else {
+                    viewTitle.innerText = "No tracks found.";
+                }
             } catch (err) {
                 console.error(err);
-                viewTitle.innerText = "Search failed. Check login.";
+                viewTitle.innerText = "Search failed. Session may have expired.";
             } finally {
                 loader.classList.add('hidden');
             }
@@ -250,10 +265,10 @@
 
         function displayTracks(tracks) {
             resultsGrid.innerHTML = tracks.map(track => `
-                <div onclick="playTrack('${track.preview_url}', '${track.name}', '${track.artists[0].name}', '${track.album.images[0].url}', '${track.id}')" 
+                <div onclick="playTrack('${track.preview_url}', '${track.name.replace(/'/g, "\\'")}', '${track.artists[0].name.replace(/'/g, "\\'")}', '${track.album.images[0]?.url}', '${track.id}')" 
                      class="spotify-card bg-zinc-900/40 p-4 rounded-xl hover:bg-zinc-800 transition group cursor-pointer border border-zinc-800/50">
                     <div class="relative mb-4 aspect-square">
-                        <img src="${track.album.images[0].url}" class="rounded-lg object-cover w-full h-full shadow-2xl bg-zinc-800" />
+                        <img src="${track.album.images[0]?.url || 'https://via.placeholder.com/300'}" class="rounded-lg object-cover w-full h-full shadow-2xl bg-zinc-800" />
                         <div class="play-btn absolute bottom-2 right-2 w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl transition opacity-0 transform translate-y-2">
                             <i class="fas fa-play text-white ml-1"></i>
                         </div>
@@ -267,7 +282,7 @@
 
         // Player Logic
         function playTrack(url, title, artist, img, id) {
-            if (!url) {
+            if (!url || url === 'null' || url === 'undefined') {
                 alert("Spotify does not provide a preview for this specific track.");
                 return;
             }
@@ -288,6 +303,7 @@
         }
 
         function togglePlay() {
+            if (!audio.src) return;
             if (audio.paused) {
                 audio.play();
                 masterPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';

@@ -180,27 +180,32 @@
         let accessToken = localStorage.getItem('vusic_session_token');
 
         function loginWithSpotify() {
+            // Updated Scope to ensure full player control
             const scope = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-library-read';
             
-            // Re-constructing URL explicitly to ensure no characters are missed
-            const authUrl = new URL('https://accounts.spotify.com/authorize');
-            authUrl.searchParams.append('client_id', CLIENT_ID);
-            authUrl.searchParams.append('response_type', 'token');
-            authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-            authUrl.searchParams.append('scope', scope);
-            authUrl.searchParams.append('show_dialog', 'true');
+            // Build URL manually and extremely cleanly to avoid "unsupported_response_type"
+            // Ensure there are NO spaces in the string below
+            const authUrl = "https://accounts.spotify.com/authorize" +
+                            "?client_id=" + CLIENT_ID +
+                            "&response_type=token" +
+                            "&redirect_uri=" + encodeURIComponent(REDIRECT_URI) +
+                            "&scope=" + encodeURIComponent(scope) +
+                            "&show_dialog=true";
             
-            window.location.href = authUrl.toString();
+            window.location.href = authUrl;
         }
 
         window.addEventListener('load', () => {
-            // Check for errors in the hash first
+            // Check for error in hash and display it
             if (window.location.hash.includes('error=')) {
-                const errorMatch = window.location.hash.match(/error=([^&]*)/);
-                if (errorMatch) {
+                const urlParams = new URLSearchParams(window.location.hash.substring(1));
+                const error = urlParams.get('error');
+                if (error) {
                     const display = document.getElementById('errorDisplay');
-                    display.innerText = "Spotify Error: " + decodeURIComponent(errorMatch[1]);
+                    display.innerText = "Spotify Error: " + error.replace(/_/g, ' ');
                     display.classList.remove('hidden');
+                    // Clear the hash to allow retrying
+                    history.replaceState(null, null, window.location.pathname);
                 }
             }
 
@@ -242,7 +247,8 @@
             player.addListener('authentication_error', ({ message }) => {
                 console.error(message);
                 localStorage.removeItem('vusic_session_token');
-                location.reload();
+                // Avoid infinite reload, only reload if we actually had a token
+                if(accessToken) location.reload();
             });
 
             player.addListener('player_state_changed', state => {

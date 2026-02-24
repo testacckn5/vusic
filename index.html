@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vusic - Premium Audio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --vusic-purple: #a855f7;
+            --vusic-blue: #3b82f6;
+            --vusic-black: #09090b;
+        }
+        body { 
+            background: radial-gradient(circle at top left, #1e1b4b, #09090b 40%);
+            background-attachment: fixed;
+            color: #fff; 
+            font-family: 'Inter', sans-serif; 
+            overflow-x: hidden; 
+        }
+        .vusic-gradient-text {
+            background: linear-gradient(to right, #c084fc, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .vusic-main-btn {
+            background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+            transition: all 0.3s ease;
+        }
+        .vusic-main-btn:hover {
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+            transform: translateY(-2px);
+        }
+        .glass { 
+            background: rgba(15, 15, 20, 0.7); 
+            backdrop-filter: blur(20px); 
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .track-card { 
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); 
+        }
+        .track-card:hover { 
+            background: rgba(255,255,255,0.08); 
+            border-color: rgba(168, 85, 247, 0.5);
+            transform: scale(1.02); 
+        }
+        input:focus { 
+            outline: none; 
+            border-color: #a855f7; 
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.2); 
+        }
+        .player-bar {
+            background: linear-gradient(to top, #000000, rgba(9, 9, 11, 0.95));
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        /* Custom seek bar */
+        input[type=range] { appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #27272a; border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 12px; width: 12px; border-radius: 50%; background: #fff; cursor: pointer; appearance: none; margin-top: -4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Auth Overlay -->
+    <div id="authOverlay" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-6 text-center">
+        <div class="max-w-md">
+            <div class="w-24 h-24 mx-auto vusic-main-btn rounded-3xl flex items-center justify-center mb-8 shadow-2xl relative">
+                <i class="fa-solid fa-bolt-lightning text-5xl text-white"></i>
+                <div class="absolute inset-0 bg-white/20 blur-xl rounded-full animate-pulse"></div>
+            </div>
+            <h2 class="text-5xl font-black mb-2 tracking-tighter italic vusic-gradient-text">VUSIC</h2>
+            <p class="text-zinc-400 mb-10 font-medium">Unlock Premium Audio Session</p>
+            <button onclick="loginWithSpotify()" class="vusic-main-btn text-white font-black py-5 px-14 rounded-2xl flex items-center justify-center w-full text-lg tracking-wide group transition-all">
+                <i class="fa-brands fa-spotify mr-3 text-2xl group-hover:rotate-12 transition-transform"></i>
+                INITIALIZE SESSION
+            </button>
+            <p id="uriHint" class="mt-6 text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Ensure Redirect URI is set in Dashboard</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <nav class="p-6 flex flex-col md:flex-row items-center justify-between glass sticky top-0 z-50 gap-6">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 vusic-main-btn rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-bolt-lightning text-white text-sm"></i>
+            </div>
+            <span class="text-2xl font-black tracking-tighter italic vusic-gradient-text">VUSIC</span>
+        </div>
+        
+        <div class="relative w-full md:w-1/2 lg:w-2/5">
+            <input id="searchInput" type="text" placeholder="Search the world of music..." 
+                class="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-3 px-14 text-sm transition-all focus:bg-zinc-900">
+            <i class="fa-solid fa-magnifying-glass absolute left-5 top-4 text-zinc-500"></i>
+        </div>
+
+        <div id="deviceStatus" class="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-900/50 px-4 py-2 rounded-full border border-zinc-800">
+            <div class="w-1.5 h-1.5 rounded-full bg-zinc-700 mr-1" id="statusDot"></div>
+            System Standby
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-8 lg:px-16">
+        <div id="resultsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
+            <!-- Dynamic Content -->
+        </div>
+        
+        <div id="emptyState" class="flex flex-col items-center justify-center py-40">
+            <div class="relative">
+                <i class="fa-solid fa-wave-square text-8xl vusic-gradient-text opacity-10 animate-pulse"></i>
+            </div>
+            <p class="mt-6 text-zinc-500 font-medium tracking-wide">Ready for input. Search to begin.</p>
+        </div>
+    </main>
+
+    <!-- Player Bar -->
+    <footer id="playerBar" class="fixed bottom-0 left-0 right-0 player-bar p-5 translate-y-full transition-all duration-700 z-50 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+        <div class="max-w-screen-2xl mx-auto flex items-center justify-between">
+            <!-- Metadata -->
+            <div class="flex items-center space-x-5 w-1/4">
+                <div class="relative group">
+                    <img id="nowPlayingArt" src="" class="w-16 h-16 rounded-xl shadow-2xl bg-zinc-900 object-cover border border-white/5">
+                    <div class="absolute inset-0 bg-purple-500/20 rounded-xl blur-lg -z-10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div class="min-w-0">
+                    <p id="nowPlayingTitle" class="font-bold truncate text-base mb-0.5">Song Title</p>
+                    <p id="nowPlayingArtist" class="text-xs text-zinc-400 truncate font-medium">Artist Name</p>
+                </div>
+            </div>
+
+            <!-- Playback -->
+            <div class="flex flex-col items-center w-2/5 px-10">
+                <div class="flex items-center space-x-10 mb-3">
+                    <button onclick="player.previousTrack()" class="text-zinc-500 hover:text-white transition-colors"><i class="fa-solid fa-backward-step text-xl"></i></button>
+                    <button id="toggleBtn" class="bg-white text-black w-14 h-14 rounded-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                        <i id="toggleIcon" class="fa-solid fa-play ml-1 text-2xl"></i>
+                    </button>
+                    <button onclick="player.nextTrack()" class="text-zinc-500 hover:text-white transition-colors"><i class="fa-solid fa-forward-step text-xl"></i></button>
+                </div>
+                <div class="w-full flex items-center space-x-4">
+                    <span id="posTime" class="text-[10px] text-zinc-500 font-bold tabular-nums">0:00</span>
+                    <div class="relative flex-grow h-1.5">
+                        <input id="seekSlider" type="range" step="100" class="absolute inset-0 w-full z-10 opacity-0 cursor-pointer">
+                        <div class="absolute inset-0 bg-zinc-800 rounded-full overflow-hidden">
+                            <div id="progressBar" class="h-full vusic-main-btn rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <span id="durTime" class="text-[10px] text-zinc-500 font-bold tabular-nums">0:00</span>
+                </div>
+            </div>
+
+            <!-- Volume/Action -->
+            <div class="flex items-center justify-end space-x-6 w-1/4">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-volume-high text-zinc-600"></i>
+                    <input id="volSlider" type="range" class="w-24 accent-purple-500">
+                </div>
+                <button class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-list-ul text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script>
+        const CLIENT_ID = '3e44756a158e487eb31540648769226f'; 
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
+        
+        let player;
+        let device_id;
+        let accessToken = localStorage.getItem('vusic_session_token');
+
+        function loginWithSpotify() {
+            // Updated Scope to ensure full player control
+            const scope = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-library-read';
+            const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}&show_dialog=true`;
+            window.location.href = authUrl;
+        }
+
+        window.addEventListener('load', () => {
+            const hash = window.location.hash.substring(1).split('&').reduce((initial, item) => {
+                if (item) {
+                    var parts = item.split('=');
+                    initial[parts[0]] = decodeURIComponent(parts[1]);
+                }
+                return initial;
+            }, {});
+
+            if (hash.access_token) {
+                accessToken = hash.access_token;
+                localStorage.setItem('vusic_session_token', accessToken);
+                // Force a clean URL state
+                history.replaceState(null, null, window.location.pathname);
+            }
+
+            if (accessToken) {
+                document.getElementById('authOverlay').style.display = 'none';
+            }
+        });
+
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            if (!accessToken) return;
+
+            player = new Spotify.Player({
+                name: 'Vusic Pro Terminal',
+                getOAuthToken: cb => { cb(accessToken); },
+                volume: 0.5
+            });
+
+            player.addListener('ready', ({ device_id: id }) => {
+                device_id = id;
+                const status = document.getElementById('deviceStatus');
+                status.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-purple-500 mr-2 shadow-[0_0_8px_#a855f7]"></div> Vusic Pro Online`;
+                status.classList.add('text-zinc-200');
+            });
+
+            player.addListener('authentication_error', ({ message }) => {
+                console.error(message);
+                localStorage.removeItem('vusic_session_token');
+                location.reload();
+            });
+
+            player.addListener('player_state_changed', state => {
+                if (!state) return;
+                const { track_window, paused, position, duration } = state;
+                const track = track_window.current_track;
+
+                document.getElementById('nowPlayingTitle').innerText = track.name;
+                document.getElementById('nowPlayingArtist').innerText = track.artists[0].name;
+                document.getElementById('nowPlayingArt').src = track.album.images[0].url;
+                document.getElementById('playerBar').classList.remove('translate-y-full');
+                document.getElementById('toggleIcon').className = paused ? 'fa-solid fa-play ml-1' : 'fa-solid fa-pause';
+                
+                const percent = (position / duration) * 100;
+                document.getElementById('progressBar').style.width = `${percent}%`;
+                document.getElementById('posTime').innerText = formatTime(position/1000);
+                document.getElementById('durTime').innerText = formatTime(duration/1000);
+                document.getElementById('seekSlider').max = duration;
+                document.getElementById('seekSlider').value = position;
+            });
+
+            player.connect();
+        };
+
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const query = searchInput.value;
+                if(!query) return;
+                
+                try {
+                    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=30`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    const data = await res.json();
+                    if(data.tracks) renderTracks(data.tracks.items);
+                } catch(e) {
+                    console.error("Session expired or API error");
+                }
+            }
+        });
+
+        function renderTracks(tracks) {
+            const grid = document.getElementById('resultsGrid');
+            const empty = document.getElementById('emptyState');
+            grid.innerHTML = '';
+            empty.classList.add('hidden');
+
+            tracks.forEach(track => {
+                const card = document.createElement('div');
+                card.className = 'track-card p-4 rounded-3xl cursor-pointer group';
+                card.onclick = () => playTrack(track.uri);
+                card.innerHTML = `
+                    <div class="relative mb-5">
+                        <img src="${track.album.images[0].url}" class="w-full aspect-square object-cover rounded-2xl shadow-2xl bg-zinc-800">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
+                            <div class="w-14 h-14 vusic-main-btn rounded-2xl flex items-center justify-center text-white shadow-2xl">
+                                <i class="fa-solid fa-play ml-1 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-1">
+                        <h3 class="font-bold text-sm truncate group-hover:vusic-gradient-text transition-all">${track.name}</h3>
+                        <p class="text-[10px] font-bold text-zinc-500 truncate mt-1.5 uppercase tracking-wider">${track.artists[0].name}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        async function playTrack(uri) {
+            await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${device_id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ uris: [uri] }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+        }
+
+        document.getElementById('toggleBtn').addEventListener('click', () => player.togglePlay());
+        document.getElementById('volSlider').addEventListener('input', (e) => player.setVolume(e.target.value / 100));
+        document.getElementById('seekSlider').addEventListener('change', (e) => player.seek(e.target.value));
+
+        function formatTime(s) {
+            const m = Math.floor(s / 60);
+            const r = Math.floor(s % 60);
+            return `${m}:${r < 10 ? '0' : ''}${r}`;
+        }
+    </script>
+</body>
+</html>

@@ -81,6 +81,7 @@
                 <i class="fa-brands fa-spotify mr-3 text-2xl group-hover:rotate-12 transition-transform"></i>
                 INITIALIZE SESSION
             </button>
+            <div id="errorDisplay" class="hidden mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-xs font-mono"></div>
             <p id="uriHint" class="mt-6 text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Ensure Redirect URI is set in Dashboard</p>
         </div>
     </div>
@@ -172,7 +173,6 @@
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <script>
         const CLIENT_ID = '3e44756a158e487eb31540648769226f'; 
-        // Updated Redirect URI to your GitHub Pages link
         const REDIRECT_URI = 'https://testacckn5.github.io/vusic/';
         
         let player;
@@ -180,13 +180,30 @@
         let accessToken = localStorage.getItem('vusic_session_token');
 
         function loginWithSpotify() {
-            // Updated Scope to ensure full player control
             const scope = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-library-read';
-            const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}&show_dialog=true`;
-            window.location.href = authUrl;
+            
+            // Re-constructing URL explicitly to ensure no characters are missed
+            const authUrl = new URL('https://accounts.spotify.com/authorize');
+            authUrl.searchParams.append('client_id', CLIENT_ID);
+            authUrl.searchParams.append('response_type', 'token');
+            authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+            authUrl.searchParams.append('scope', scope);
+            authUrl.searchParams.append('show_dialog', 'true');
+            
+            window.location.href = authUrl.toString();
         }
 
         window.addEventListener('load', () => {
+            // Check for errors in the hash first
+            if (window.location.hash.includes('error=')) {
+                const errorMatch = window.location.hash.match(/error=([^&]*)/);
+                if (errorMatch) {
+                    const display = document.getElementById('errorDisplay');
+                    display.innerText = "Spotify Error: " + decodeURIComponent(errorMatch[1]);
+                    display.classList.remove('hidden');
+                }
+            }
+
             const hash = window.location.hash.substring(1).split('&').reduce((initial, item) => {
                 if (item) {
                     var parts = item.split('=');
@@ -198,7 +215,6 @@
             if (hash.access_token) {
                 accessToken = hash.access_token;
                 localStorage.setItem('vusic_session_token', accessToken);
-                // Force a clean URL state
                 history.replaceState(null, null, window.location.pathname);
             }
 

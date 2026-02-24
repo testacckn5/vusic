@@ -144,7 +144,7 @@
                 <button id="master-play-btn" class="w-9 h-9 flex items-center justify-center bg-white rounded-full text-black hover:scale-105 transition">
                     <i class="fas fa-play ml-1"></i>
                 </button>
-                <button class="text-zinc-400 hover:text-white transition text-lg"><i class="fas fa-step-forward"></i></button>
+                <button class="text-zinc-400 hover:text-white transition text-lg"><i class="fas fa-step-backward"></i></button>
                 <button class="text-zinc-400 hover:text-white transition"><i class="fas fa-redo text-sm"></i></button>
             </div>
             
@@ -200,16 +200,25 @@
                     window.location.hash = ""; // Clean URL
                     onLoggedIn();
                 } else if (params.get('error')) {
-                    viewTitle.innerText = "Auth Error: " + params.get('error');
-                    console.error("Spotify Auth Error:", params.get('error'));
+                    const errorMsg = params.get('error');
+                    viewTitle.innerText = "Auth Error: " + errorMsg;
+                    console.error("Spotify Auth Error:", errorMsg);
                 }
             }
         });
 
-        // Login Logic - Fixed construction to prevent unsupported_response_type
+        // Login Logic - Using direct URL string with strict parameter ordering
         loginBtn.addEventListener('click', () => {
-            const authUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${encodeURIComponent(SCOPES)}&show_dialog=true`;
-            window.location.href = authUrl;
+            // response_type=token is critical for Implicit Grant
+            const params = [
+                `client_id=${CLIENT_ID}`,
+                `redirect_uri=${encodeURIComponent(REDIRECT_URI)}`,
+                `response_type=token`,
+                `scope=${encodeURIComponent(SCOPES)}`,
+                `show_dialog=true`
+            ].join('&');
+            
+            window.location.href = `${AUTH_ENDPOINT}?${params}`;
         });
 
         function onLoggedIn() {

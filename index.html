@@ -144,7 +144,7 @@
                 <button id="master-play-btn" class="w-9 h-9 flex items-center justify-center bg-white rounded-full text-black hover:scale-105 transition">
                     <i class="fas fa-play ml-1"></i>
                 </button>
-                <button class="text-zinc-400 hover:text-white transition text-lg"><i class="fas fa-step-backward"></i></button>
+                <button class="text-zinc-400 hover:text-white transition text-lg"><i class="fas fa-step-forward"></i></button>
                 <button class="text-zinc-400 hover:text-white transition"><i class="fas fa-redo text-sm"></i></button>
             </div>
             
@@ -201,7 +201,7 @@
                     onLoggedIn();
                 } else if (params.get('error')) {
                     const errorMsg = params.get('error');
-                    viewTitle.innerText = "Auth Error: " + errorMsg;
+                    viewTitle.innerHTML = `<span class="text-red-500">Error: ${errorMsg}</span><br><span class="text-sm font-normal text-zinc-500">Make sure Implicit Grant is supported by your Client ID.</span>`;
                     console.error("Spotify Auth Error:", errorMsg);
                 }
             }
@@ -209,7 +209,7 @@
 
         // Login Logic - Using direct URL string with strict parameter ordering
         loginBtn.addEventListener('click', () => {
-            // response_type=token is critical for Implicit Grant
+            // response_type=token triggers Implicit Grant automatically
             const params = [
                 `client_id=${CLIENT_ID}`,
                 `redirect_uri=${encodeURIComponent(REDIRECT_URI)}`,

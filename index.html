@@ -169,11 +169,10 @@
     <audio id="main-audio"></audio>
 
     <script>
-        // CONFIGURATION FROM YOUR UPLOADED IMAGE (Corrected Client ID)
+        // CONFIGURATION
         const CLIENT_ID = '3e44756a158e487eb31540648769226f';
         const REDIRECT_URI = 'https://testacckn5.github.io/vusic/';
         const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
-        const RESPONSE_TYPE = "token"; // Must be "token" for Implicit Grant
         const SCOPES = "user-read-private user-read-email";
 
         // State
@@ -207,17 +206,10 @@
             }
         });
 
-        // Login Logic
+        // Login Logic - Fixed construction to prevent unsupported_response_type
         loginBtn.addEventListener('click', () => {
-            // Re-constructing query strictly to avoid "unsupported_response_type"
-            const url = new URL(AUTH_ENDPOINT);
-            url.searchParams.append('client_id', CLIENT_ID);
-            url.searchParams.append('redirect_uri', REDIRECT_URI);
-            url.searchParams.append('response_type', 'token'); // Explicitly set
-            url.searchParams.append('scope', SCOPES);
-            url.searchParams.append('show_dialog', 'true');
-            
-            window.location.href = url.toString();
+            const authUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${encodeURIComponent(SCOPES)}&show_dialog=true`;
+            window.location.href = authUrl;
         });
 
         function onLoggedIn() {
@@ -228,7 +220,7 @@
                 </div>
             `;
             viewTitle.innerText = "Discover Music";
-            searchTracks('Lofi'); // Initial load
+            searchTracks('Lofi'); 
         }
 
         // Search Logic
@@ -237,10 +229,7 @@
         });
 
         async function searchTracks(query) {
-            if (!accessToken) {
-                alert("Please login with Spotify first!");
-                return;
-            }
+            if (!accessToken) return;
             
             loader.classList.remove('hidden');
             resultsGrid.innerHTML = '';
@@ -252,12 +241,9 @@
                 const data = await response.json();
                 if (data.tracks && data.tracks.items) {
                     displayTracks(data.tracks.items);
-                } else {
-                    viewTitle.innerText = "No tracks found.";
                 }
             } catch (err) {
                 console.error(err);
-                viewTitle.innerText = "Search failed. Session may have expired.";
             } finally {
                 loader.classList.add('hidden');
             }
@@ -280,12 +266,8 @@
             `).join('');
         }
 
-        // Player Logic
         function playTrack(url, title, artist, img, id) {
-            if (!url || url === 'null' || url === 'undefined') {
-                alert("Spotify does not provide a preview for this specific track.");
-                return;
-            }
+            if (!url || url === 'null') return;
 
             if (currentTrackId === id) {
                 togglePlay();

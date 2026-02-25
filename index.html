@@ -3,436 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vzo's music app</title>
+    <title>vusic - Personal Music Player</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-        
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #050505;
-            color: #fff;
-            overflow: hidden;
-        }
-
-        .sidebar-item {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .sidebar-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-            transform: translateX(4px);
-        }
-
-        .glass-header {
-            background: rgba(5, 5, 5, 0.8);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .spotify-card {
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .spotify-card:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateY(-8px);
-            border-color: rgba(99, 102, 241, 0.3);
-        }
-
-        .play-btn-overlay {
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.3s ease;
-        }
-
-        .spotify-card:hover .play-btn-overlay {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        input[type='range'] {
-            accent-color: #6366f1;
-            height: 4px;
-        }
-
-        .hero-gradient {
-            background: linear-gradient(180deg, rgba(99, 102, 241, 0.15) 0%, rgba(5, 5, 5, 0) 100%);
-        }
-
-        ::-webkit-scrollbar {
-            width: 5px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #222;
-            border-radius: 10px;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="h-screen flex flex-col selection:bg-indigo-500/30">
+<body class="bg-black text-neutral-100 min-h-screen flex flex-col overflow-hidden">
 
-    <!-- App Container -->
-    <div class="flex flex-1 overflow-hidden">
-        
-        <!-- Sidebar -->
-        <aside class="w-72 bg-[#0a0a0a] p-6 hidden md:flex flex-col gap-8 border-r border-white/5">
-            <div class="flex items-center gap-3 px-2">
-                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                    <i class="fas fa-bolt text-white text-lg"></i>
-                </div>
-                <h1 class="text-2xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">VZO MUSIC</h1>
-            </div>
-
-            <nav class="flex flex-col gap-1">
-                <button onclick="showHome()" class="sidebar-item flex items-center gap-4 text-white font-semibold p-3 rounded-xl bg-white/5">
-                    <i class="fas fa-home-alt text-indigo-400"></i> Home
-                </button>
-            </nav>
-
-            <div id="auth-section" class="mt-auto">
-                <button id="login-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-xl shadow-indigo-500/10 active:scale-95">
-                    Sign in with Spotify
-                </button>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 flex flex-col relative overflow-y-auto bg-[#050505]">
-            <div class="absolute top-0 left-0 w-full h-96 hero-gradient pointer-events-none"></div>
-
-            <!-- Header -->
-            <header class="sticky top-0 z-30 px-8 py-6 glass-header flex items-center justify-between">
-                <div class="relative w-full max-w-2xl group">
-                    <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-indigo-400 transition-colors"></i>
-                    <input 
-                        id="search-input"
-                        type="text" 
-                        placeholder="Search for tracks..." 
-                        class="w-full bg-white/5 border border-white/5 rounded-2xl py-4 pl-14 pr-6 text-sm focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none placeholder:text-zinc-600"
-                    >
-                </div>
-            </header>
-
-            <!-- Scrollable Content -->
-            <div id="content-area" class="relative z-10 px-8 py-8">
-                <div id="home-view">
-                    <div class="mb-12">
-                        <h2 class="text-4xl font-extrabold mb-2 tracking-tight">Good evening</h2>
-                        <p id="status-text" class="text-zinc-500 font-medium italic">Ready for music</p>
-                    </div>
-
-                    <section class="mb-12">
-                        <h3 class="text-xl font-bold mb-6">Featured Tracks</h3>
-                        <div id="featured-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 min-h-[200px]">
-                            <!-- Injected -->
-                        </div>
-                    </section>
-
-                    <section>
-                        <h3 class="text-xl font-bold mb-6">Recently Played</h3>
-                        <div id="recs-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 min-h-[200px]">
-                            <!-- Injected -->
-                        </div>
-                    </section>
-                </div>
-
-                <div id="search-view" class="hidden">
-                    <h2 id="search-title" class="text-3xl font-bold mb-8">Search Results</h2>
-                    <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                        <!-- Search cards will be injected here -->
-                    </div>
-                </div>
-                
-                <div id="loader" class="hidden flex flex-col items-center justify-center py-32">
-                    <div class="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p class="text-zinc-500 mt-6 font-medium tracking-wide">Connecting...</p>
-                </div>
-            </div>
-
-            <div class="h-32"></div>
-        </main>
+    <!-- LOGIN OVERLAY -->
+    <div id="login-screen" class="fixed inset-0 bg-neutral-950 z-50 flex flex-col items-center justify-center p-4">
+        <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-emerald-500/20">
+            <i data-lucide="music" class="text-black w-10 h-10"></i>
+        </div>
+        <h1 class="text-4xl font-black mb-2 tracking-tighter">vusic</h1>
+        <p class="text-neutral-400 mb-8 max-w-xs text-center">Your personal Spotify playback interface.</p>
+        <button id="login-btn" class="flex items-center gap-2 bg-emerald-500 text-black px-8 py-4 rounded-full font-bold hover:scale-105 transition-transform shadow-lg shadow-emerald-500/10">
+            <i data-lucide="log-in" class="w-5 h-5"></i>
+            Login with Spotify
+        </button>
     </div>
 
-    <!-- Player Bar -->
-    <footer class="h-28 bg-[#080808]/90 backdrop-blur-3xl border-t border-white/5 px-8 flex items-center justify-between z-40 relative">
-        <div class="flex items-center gap-5 w-1/4">
-            <div class="relative group">
-                <img id="player-img" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop" class="w-16 h-16 rounded-xl shadow-2xl object-cover bg-zinc-800" alt="">
-            </div>
-            <div class="min-w-0">
-                <h4 id="player-title" class="text-sm font-bold truncate text-white mb-1 tracking-tight">Waiting for track...</h4>
-                <p id="player-artist" class="text-xs text-zinc-500 truncate font-medium">VZO Music</p>
-            </div>
-        </div>
-
-        <div class="flex flex-col items-center gap-3 w-1/2 max-w-2xl px-8">
-            <div class="flex items-center gap-8">
-                <button class="text-zinc-300 hover:text-white transition-all text-xl"><i class="fas fa-step-backward"></i></button>
-                <button id="master-play-btn" class="w-12 h-12 flex items-center justify-center bg-white rounded-full text-black hover:scale-110 active:scale-95 transition-all shadow-xl">
-                    <i class="fas fa-play ml-1"></i>
-                </button>
-                <button class="text-zinc-300 hover:text-white transition-all text-xl"><i class="fas fa-step-forward"></i></button>
+    <!-- MAIN APP INTERFACE (Hidden by default) -->
+    <div id="app-content" class="hidden flex-1 flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="h-16 border-b border-neutral-800 flex items-center justify-between px-6 bg-neutral-900/50 backdrop-blur-md sticky top-0 z-20">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-emerald-500 rounded flex items-center justify-center">
+                    <i data-lucide="music" class="text-black w-[18px] h-[18px]"></i>
+                </div>
+                <span class="text-xl font-black tracking-tight italic">vusic</span>
             </div>
             
-            <div class="flex items-center gap-4 w-full group">
-                <span id="current-time" class="text-[11px] font-bold text-zinc-500 w-10 text-right tabular-nums">0:00</span>
-                <div class="relative flex-1 flex items-center">
-                    <input id="progress-bar" type="range" value="0" step="0.1" class="w-full appearance-none bg-zinc-800 rounded-full h-1.5 cursor-pointer group-hover:bg-zinc-700">
+            <form id="search-form" class="flex-1 max-w-md mx-8 relative">
+                <input 
+                    id="search-input"
+                    type="text" 
+                    placeholder="Search tracks, artists, or albums..." 
+                    class="w-full bg-neutral-800 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                />
+                <i data-lucide="search" class="absolute left-3 top-2.5 text-neutral-500 w-4 h-4"></i>
+            </form>
+
+            <div class="flex items-center gap-4">
+                <div id="user-profile" class="hidden sm:flex items-center gap-2 bg-neutral-800 p-1 pr-3 rounded-full border border-neutral-700">
+                    <img id="user-avatar" src="" class="w-7 h-7 rounded-full object-cover hidden" alt="User" />
+                    <div id="user-placeholder" class="w-7 h-7 bg-neutral-700 rounded-full flex items-center justify-center"><i data-lucide="user" class="w-3.5 h-3.5"></i></div>
+                    <span id="user-name" class="text-xs font-semibold"></span>
                 </div>
-                <span id="duration" class="text-[11px] font-bold text-zinc-500 w-10 text-left tabular-nums">0:30</span>
+                <button id="logout-btn" class="text-xs text-neutral-500 hover:text-white transition-colors">Logout</button>
             </div>
-        </div>
+        </header>
 
-        <div class="flex items-center justify-end gap-6 w-1/4">
-            <div class="flex items-center gap-3 w-32 group">
-                <i class="fas fa-volume-up text-zinc-500 text-xs group-hover:text-white transition-colors"></i>
-                <input id="volume-bar" type="range" value="70" class="w-full appearance-none bg-zinc-800 rounded-full h-1 cursor-pointer">
+        <main class="flex-1 flex overflow-hidden">
+            <!-- Sidebar -->
+            <nav class="w-64 border-r border-neutral-800 bg-neutral-950 p-6 hidden md:block">
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Menu</h3>
+                        <ul class="space-y-3">
+                            <li class="flex items-center gap-3 text-emerald-500 cursor-pointer"><i data-lucide="layout" class="w-5 h-5"></i> <span class="font-medium">Browse</span></li>
+                            <li class="flex items-center gap-3 text-neutral-400 hover:text-white cursor-pointer transition-colors"><i data-lucide="disc" class="w-5 h-5"></i> <span class="font-medium">Playlists</span></li>
+                            <li class="flex items-center gap-3 text-neutral-400 hover:text-white cursor-pointer transition-colors"><i data-lucide="music" class="w-5 h-5"></i> <span class="font-medium">Liked Songs</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Content -->
+            <section class="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-neutral-900 to-black scrollbar-hide">
+                <div id="results-container">
+                    <!-- Default State -->
+                    <div id="empty-state" class="h-full flex flex-col items-center justify-center text-neutral-600 mt-20">
+                        <i data-lucide="disc" class="w-20 h-20 mb-4 opacity-10 animate-pulse"></i>
+                        <p class="text-lg font-medium">Ready to play some music?</p>
+                        <p class="text-sm opacity-60">Search for tracks in the bar above.</p>
+                    </div>
+                    <!-- Tracks Grid -->
+                    <div id="tracks-grid" class="hidden">
+                        <h2 id="search-title" class="text-2xl font-bold mb-6">Results</h2>
+                        <div id="tracks-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                            <!-- JS will inject tracks here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Player Bar -->
+        <footer class="h-24 bg-neutral-950 border-t border-neutral-800 px-6 flex items-center justify-between z-30 shadow-2xl">
+            <!-- Track Info -->
+            <div class="flex items-center gap-4 w-1/3 min-w-[200px]">
+                <div id="player-track-info" class="flex items-center gap-3 opacity-50">
+                    <div class="w-14 h-14 bg-neutral-800 rounded flex items-center justify-center overflow-hidden">
+                        <img id="player-album-art" src="" class="hidden w-full h-full object-cover" />
+                        <i id="player-music-icon" data-lucide="music" class="text-neutral-600 w-5 h-5"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <div id="player-track-name" class="font-bold text-sm truncate">Not playing</div>
+                        <div id="player-artist-name" class="text-neutral-400 text-xs truncate">Select a track</div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </footer>
 
-    <audio id="main-audio"></audio>
+            <!-- Controls -->
+            <div class="flex flex-col items-center gap-2 w-1/3">
+                <div class="flex items-center gap-6">
+                    <button id="prev-btn" class="text-neutral-400 hover:text-white transition-colors"><i data-lucide="skip-back" class="w-5 h-5"></i></button>
+                    <button id="toggle-play-btn" class="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-transform">
+                        <i id="play-icon" data-lucide="play" class="w-5 h-5 ml-0.5 fill-current"></i>
+                    </button>
+                    <button id="next-btn" class="text-neutral-400 hover:text-white transition-colors"><i data-lucide="skip-forward" class="w-5 h-5"></i></button>
+                </div>
+                <div class="w-full max-w-md h-1 bg-neutral-800 rounded-full relative group cursor-pointer overflow-hidden">
+                    <div id="progress-bar" class="absolute left-0 top-0 bottom-0 bg-neutral-400 group-hover:bg-emerald-500 w-0 transition-colors"></div>
+                </div>
+            </div>
+
+            <!-- Volume -->
+            <div class="flex items-center justify-end gap-3 w-1/3">
+                <i data-lucide="volume-2" class="text-neutral-400 w-[18px] h-[18px]"></i>
+                <div class="w-24 h-1 bg-neutral-800 rounded-full group cursor-pointer overflow-hidden">
+                    <div class="h-full bg-neutral-400 group-hover:bg-emerald-500 w-2/3 transition-colors"></div>
+                </div>
+            </div>
+        </footer>
+    </div>
 
     <script>
+        // CONFIG
         const CLIENT_ID = '3e44756a158e487eb31540648769226f';
         const CLIENT_SECRET = 'bcf32f6a23c94b4987ad1822bf9ac517';
         const REDIRECT_URI = 'https://testacckn5.github.io/vusic/';
-        
-        const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
-        const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
-
-        // FALLBACK CONTENT if API fails
-        const FALLBACK_TRACKS = [
-            { id: 'f1', name: "Midnight City", artists: [{name: "M83"}], album: { images: [{url: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=400&h=400&fit=crop"}] }, preview_url: "https://p.scdn.co/mp3-preview/bc35c40bc333857d90d8c0b2c159045731383794" },
-            { id: 'f2', name: "Blinding Lights", artists: [{name: "The Weeknd"}], album: { images: [{url: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop"}] }, preview_url: "https://p.scdn.co/mp3-preview/82f182104193309a96e94999f8d6896173c3327f" },
-            { id: 'f3', name: "Levitating", artists: [{name: "Dua Lipa"}], album: { images: [{url: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=400&h=400&fit=crop"}] }, preview_url: "https://p.scdn.co/mp3-preview/a911a36480e668600c01a0701b22e118ba8e66e3" },
-            { id: 'f4', name: "Circles", artists: [{name: "Post Malone"}], album: { images: [{url: "https://images.unsplash.com/photo-1459749411177-042180ce673c?w=400&h=400&fit=crop"}] }, preview_url: "https://p.scdn.co/mp3-preview/a4e76a163999e0753086df1117b3510e11894a82" },
-            { id: 'f5', name: "Stay", artists: [{name: "The Kid LAROI"}], album: { images: [{url: "https://images.unsplash.com/photo-1514525253344-032993215200?w=400&h=400&fit=crop"}] }, preview_url: "https://p.scdn.co/mp3-preview/250787e91d6046e7b4b1a41544253372f87cc456" }
-        ];
+        const SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-library-read';
 
         let accessToken = null;
-        let currentTrackId = null;
+        let player = null;
+        let deviceId = null;
 
-        const loginBtn = document.getElementById('login-btn');
-        const searchInput = document.getElementById('search-input');
-        const homeView = document.getElementById('home-view');
-        const searchView = document.getElementById('search-view');
-        const resultsGrid = document.getElementById('results-grid');
-        const featuredGrid = document.getElementById('featured-grid');
-        const recsGrid = document.getElementById('recs-grid');
-        const loader = document.getElementById('loader');
-        const audio = document.getElementById('main-audio');
-        const masterPlayBtn = document.getElementById('master-play-btn');
-        const progressBar = document.getElementById('progress-bar');
-        const volumeBar = document.getElementById('volume-bar');
-        const statusText = document.getElementById('status-text');
+        // AUTH INITIALIZATION
+        function initAuth() {
+            const hash = window.location.hash;
+            let localToken = localStorage.getItem("spotify_token");
 
-        window.addEventListener('load', async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            if (code) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                await fetchAccessToken(code);
-            } else {
-                // Show offline tracks initially if no login
-                displayTracks(FALLBACK_TRACKS, featuredGrid);
-                displayTracks(FALLBACK_TRACKS.slice().reverse(), recsGrid);
-            }
-        });
-
-        loginBtn.addEventListener('click', () => {
-            const authUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=user-read-private%20user-read-email&show_dialog=true`;
-            window.location.href = authUrl;
-        });
-
-        async function fetchAccessToken(code) {
-            loader.classList.remove('hidden');
-            homeView.classList.add('hidden');
-            try {
-                const response = await fetch(TOKEN_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Authorization': 'Basic ' + btoa(CLIENT_ID + ':' + CLIENT_SECRET)
-                    },
-                    body: new URLSearchParams({
-                        grant_type: 'authorization_code',
-                        code: code,
-                        redirect_uri: REDIRECT_URI
-                    })
-                });
-
-                const data = await response.json();
-                if (data.access_token) {
-                    accessToken = data.access_token;
-                    onLoggedIn();
+            if (!localToken && hash) {
+                const params = new URLSearchParams(hash.substring(1));
+                localToken = params.get("access_token");
+                if (localToken) {
+                    localStorage.setItem("spotify_token", localToken);
+                    window.location.hash = "";
                 }
-            } catch (err) {
-                console.error("Token error:", err);
-                statusText.innerText = "Connection failed. Using offline library.";
-                onLoggedIn(); // Still enter "logged in" state to show grids
-            } finally {
-                loader.classList.add('hidden');
+            }
+
+            if (localToken) {
+                accessToken = localToken;
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                fetchUserData();
+                loadPlayerSDK();
             }
         }
 
-        function onLoggedIn() {
-            document.getElementById('auth-section').innerHTML = `
-                <div class="bg-indigo-500/10 rounded-2xl p-4 border border-indigo-500/20 text-center">
-                    <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Status</p>
-                    <p class="text-xs font-bold text-white">${accessToken ? 'Spotify Online' : 'Limited Mode'}</p>
-                </div>
-            `;
-            homeView.classList.remove('hidden');
-            loadHomeData();
-        }
-
-        async function spotifyFetch(endpoint) {
-            if (!accessToken) return null;
+        async function fetchUserData() {
             try {
-                const res = await fetch(`https://api.spotify.org/v1/${endpoint}`, {
+                const res = await fetch('https://api.spotify.com/v1/me', {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
-                if (!res.ok) return null;
-                return await res.json();
-            } catch (err) {
-                console.warn("Spotify fetch error - probable block:", err);
-                return null;
-            }
+                if (res.status === 401) return logout();
+                const data = await res.json();
+                
+                document.getElementById('user-profile').classList.remove('hidden');
+                document.getElementById('user-name').textContent = data.display_name;
+                if (data.images && data.images[0]) {
+                    const avatar = document.getElementById('user-avatar');
+                    avatar.src = data.images[0].url;
+                    avatar.classList.remove('hidden');
+                    document.getElementById('user-placeholder').classList.add('hidden');
+                }
+            } catch (e) { console.error(e); }
         }
 
-        async function loadHomeData() {
-            statusText.innerText = "Syncing with Spotify...";
+        function logout() {
+            localStorage.removeItem("spotify_token");
+            window.location.reload();
+        }
+
+        // SDK & PLAYER
+        function loadPlayerSDK() {
+            const script = document.createElement("script");
+            script.src = "https://sdk.scdn.co/spotify-player.js";
+            script.async = true;
+            document.body.appendChild(script);
+
+            window.onSpotifyWebPlaybackSDKReady = () => {
+                player = new Spotify.Player({
+                    name: 'vusic Player',
+                    getOAuthToken: cb => { cb(accessToken); },
+                    volume: 0.5
+                });
+
+                player.addListener('ready', ({ device_id }) => {
+                    deviceId = device_id;
+                    console.log('Device ready:', device_id);
+                });
+
+                player.addListener('player_state_changed', state => {
+                    if (!state) return;
+                    updateUIState(state);
+                });
+
+                player.connect();
+            };
+        }
+
+        function updateUIState(state) {
+            const track = state.track_window.current_track;
+            const isPaused = state.paused;
             
+            // Update Track Info
+            const infoContainer = document.getElementById('player-track-info');
+            infoContainer.classList.remove('opacity-50');
+            
+            document.getElementById('player-track-name').textContent = track.name;
+            document.getElementById('player-artist-name').textContent = track.artists[0].name;
+            
+            const art = document.getElementById('player-album-art');
+            art.src = track.album.images[0].url;
+            art.classList.remove('hidden');
+            document.getElementById('player-music-icon').classList.add('hidden');
+
+            // Update Play Icon
+            const icon = document.getElementById('play-icon');
+            icon.setAttribute('data-lucide', isPaused ? 'play' : 'pause');
+            lucide.createIcons();
+        }
+
+        // SEARCH & PLAYBACK
+        async function handleSearch(query) {
+            if (!query) return;
             try {
-                const [featured, recommendations] = await Promise.all([
-                    spotifyFetch('search?q=lofi%20beats&type=track&limit=10'),
-                    spotifyFetch('search?q=hits%202025&type=track&limit=10')
-                ]);
-                
-                if (featured && featured.tracks && featured.tracks.items.length > 0) {
-                    displayTracks(featured.tracks.items, featuredGrid);
-                } else {
-                    displayTracks(FALLBACK_TRACKS, featuredGrid);
-                }
-
-                if (recommendations && recommendations.tracks && recommendations.tracks.items.length > 0) {
-                    displayTracks(recommendations.tracks.items, recsGrid);
-                } else {
-                    displayTracks(FALLBACK_TRACKS.slice().reverse(), recsGrid);
-                }
-                
-                statusText.innerText = accessToken ? "Spotify connection active" : "Offline mode active";
-            } catch (e) {
-                displayTracks(FALLBACK_TRACKS, featuredGrid);
-                displayTracks(FALLBACK_TRACKS, recsGrid);
-                statusText.innerText = "Load failed. Showing local tracks.";
-            }
+                const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+                renderTracks(data.tracks.items, query);
+            } catch (e) { console.error(e); }
         }
 
-        function showHome() {
-            searchView.classList.add('hidden');
-            homeView.classList.remove('hidden');
-            searchInput.value = '';
-        }
-
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            const query = e.target.value.trim();
-            if (query.length > 1) {
-                searchTimeout = setTimeout(() => searchTracks(query), 500);
-            } else if (query.length === 0) {
-                showHome();
-            }
-        });
-
-        async function searchTracks(query) {
-            homeView.classList.add('hidden');
-            searchView.classList.remove('hidden');
-            resultsGrid.innerHTML = '<div class="col-span-full py-20 text-center text-zinc-500 animate-pulse">Searching...</div>';
+        function renderTracks(tracks, query) {
+            const grid = document.getElementById('tracks-list');
+            const empty = document.getElementById('empty-state');
+            const tracksGrid = document.getElementById('tracks-grid');
             
-            const data = await spotifyFetch(`search?q=${encodeURIComponent(query)}&type=track&limit=30`);
-            if (data && data.tracks && data.tracks.items.length > 0) {
-                displayTracks(data.tracks.items, resultsGrid);
-            } else {
-                resultsGrid.innerHTML = '<div class="col-span-full py-20 text-center text-zinc-500">No results. Try a more popular artist.</div>';
-            }
-        }
-
-        function displayTracks(tracks, targetElement) {
-            if (!tracks || tracks.length === 0) return;
-            targetElement.innerHTML = tracks.map(track => {
-                const preview = track.preview_url;
-                const hasPreview = !!preview && preview !== 'null';
-                return `
-                <div onclick="playTrack('${preview}', '${track.name.replace(/'/g, "\\'")}', '${track.artists[0].name.replace(/'/g, "\\'")}', '${track.album.images[0]?.url}', '${track.id}')" 
-                     class="spotify-card group p-4 rounded-2xl transition-all cursor-pointer">
-                    <div class="relative mb-4 aspect-square">
-                        <img src="${track.album.images[0]?.url || 'https://via.placeholder.com/300'}" class="rounded-xl object-cover w-full h-full shadow-lg bg-zinc-800" />
-                        <div class="play-btn-overlay absolute bottom-3 right-3 w-10 h-10 ${hasPreview ? 'bg-indigo-500' : 'bg-zinc-700'} rounded-full flex items-center justify-center shadow-xl">
-                            <i class="fas fa-${hasPreview ? 'play ml-0.5' : 'lock'} text-white text-xs"></i>
+            empty.classList.add('hidden');
+            tracksGrid.classList.remove('hidden');
+            document.getElementById('search-title').textContent = `Results for "${query}"`;
+            
+            grid.innerHTML = tracks.map(track => `
+                <div class="track-card bg-neutral-800/40 p-4 rounded-xl hover:bg-neutral-800 transition-all group cursor-pointer border border-transparent hover:border-neutral-700" 
+                     onclick="playTrack('${track.uri}')">
+                    <div class="relative aspect-square mb-4 shadow-lg overflow-hidden rounded-md bg-neutral-800">
+                        <img src="${track.album.images[0]?.url}" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" />
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-black shadow-xl">
+                                <i data-lucide="play" class="fill-current w-6 h-6 ml-1"></i>
+                            </div>
                         </div>
                     </div>
-                    <h3 class="font-bold truncate text-sm text-white mb-0.5">${track.name}</h3>
-                    <p class="text-zinc-500 text-[11px] truncate font-medium">${track.artists[0].name}</p>
+                    <h4 class="font-bold truncate text-sm text-white">${track.name}</h4>
+                    <p class="text-neutral-400 text-xs truncate mt-1">${track.artists.map(a => a.name).join(', ')}</p>
                 </div>
-            `}).join('');
+            `).join('');
+            lucide.createIcons();
         }
 
-        function playTrack(url, title, artist, img, id) {
-            if (!url || url === 'null') {
-                showToast("This track is unavailable for preview.");
-                return;
-            }
-            if (currentTrackId === id) {
-                togglePlay();
-                return;
-            }
-            currentTrackId = id;
-            audio.src = url;
-            audio.play();
-            
-            document.getElementById('player-title').innerText = title;
-            document.getElementById('player-artist').innerText = artist;
-            document.getElementById('player-img').src = img;
-            masterPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        async function playTrack(uri) {
+            if (!deviceId) return alert("Player not ready");
+            await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ uris: [uri] }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
         }
 
-        function togglePlay() {
-            if (!audio.src) return;
-            if (audio.paused) {
-                audio.play();
-                masterPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';
-            } else {
-                audio.pause();
-                masterPlayBtn.innerHTML = '<i class="fas fa-play ml-1"></i>';
-            }
-        }
-
-        function showToast(msg) {
-            const toast = document.createElement('div');
-            toast.className = "fixed bottom-32 left-1/2 -translate-x-1/2 bg-zinc-900 border border-white/10 px-6 py-3 rounded-full text-[11px] font-bold text-white z-50 shadow-2xl transition-all";
-            toast.innerText = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2500);
-        }
-
-        masterPlayBtn.addEventListener('click', togglePlay);
-        audio.ontimeupdate = () => {
-            if (!audio.duration) return;
-            progressBar.value = (audio.currentTime / audio.duration) * 100;
-            document.getElementById('current-time').innerText = `0:${Math.floor(audio.currentTime).toString().padStart(2, '0')}`;
-            document.getElementById('duration').innerText = `0:${Math.floor(audio.duration).toString().padStart(2, '0')}`;
+        // EVENT LISTENERS
+        document.getElementById('login-btn').onclick = () => {
+            const url = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}&response_type=token&show_dialog=true`;
+            window.location.href = url;
         };
-        progressBar.oninput = () => audio.currentTime = (progressBar.value / 100) * audio.duration;
-        volumeBar.oninput = () => audio.volume = volumeBar.value / 100;
+
+        document.getElementById('logout-btn').onclick = logout;
+
+        document.getElementById('search-form').onsubmit = (e) => {
+            e.preventDefault();
+            handleSearch(document.getElementById('search-input').value);
+        };
+
+        document.getElementById('toggle-play-btn').onclick = () => player?.togglePlay();
+        document.getElementById('next-btn').onclick = () => player?.nextTrack();
+        document.getElementById('prev-btn').onclick = () => player?.previousTrack();
+
+        // START
+        lucide.createIcons();
+        initAuth();
     </script>
 </body>
 </html>

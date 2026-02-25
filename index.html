@@ -192,7 +192,6 @@
                 const data = await response.json();
                 if (data.access_token) {
                     localStorage.setItem("spotify_token", data.access_token);
-                    // If a refresh token is provided, you would normally store it too
                     if (data.refresh_token) localStorage.setItem("spotify_refresh_token", data.refresh_token);
                 } else {
                     console.error("Token exchange failed", data);
@@ -251,6 +250,13 @@
                     updateUIState(state);
                 });
 
+                player.addListener('initialization_error', ({ message }) => { console.error(message); });
+                player.addListener('authentication_error', ({ message }) => { 
+                    console.error(message);
+                    logout(); // Token likely expired
+                });
+                player.addListener('account_error', ({ message }) => { console.error(message); });
+
                 player.connect();
             };
         }
@@ -284,9 +290,23 @@
                 const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
+                
+                if (!res.ok) {
+                    if (res.status === 401) logout();
+                    throw new Error(`Search failed with status ${res.status}`);
+                }
+
                 const data = await res.json();
-                renderTracks(data.tracks.items, query);
-            } catch (e) { console.error(e); }
+                
+                // Safety check for the data structure before passing to render
+                if (data && data.tracks && data.tracks.items) {
+                    renderTracks(data.tracks.items, query);
+                } else {
+                    console.warn("Unexpected search response format", data);
+                }
+            } catch (e) { 
+                console.error("Search error:", e); 
+            }
         }
 
         function renderTracks(tracks, query) {
@@ -318,19 +338,23 @@
 
         async function playTrack(uri) {
             if (!deviceId) return alert("Player not ready");
-            await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ uris: [uri] }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            });
+            try {
+                const res = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ uris: [uri] }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+                if (res.status === 401) logout();
+            } catch (e) {
+                console.error("Playback error", e);
+            }
         }
 
         // EVENT LISTENERS
         document.getElementById('login-btn').onclick = () => {
-            // Updated to response_type=code for the Authorization Code Flow
             const url = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}&response_type=code&show_dialog=true`;
             window.location.href = url;
         };

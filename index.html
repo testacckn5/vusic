@@ -159,7 +159,7 @@
                             <h3 class="text-xl font-bold">Featured Mixes</h3>
                             <button class="text-xs font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest">See All</button>
                         </div>
-                        <div id="featured-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        <div id="featured-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 min-h-[200px]">
                             <!-- Injected -->
                         </div>
                     </section>
@@ -169,7 +169,7 @@
                             <h3 class="text-xl font-bold">Based on your taste</h3>
                             <button class="text-xs font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest">See All</button>
                         </div>
-                        <div id="recs-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        <div id="recs-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 min-h-[200px]">
                             <!-- Injected -->
                         </div>
                     </section>
@@ -266,7 +266,6 @@
         const resultsGrid = document.getElementById('results-grid');
         const featuredGrid = document.getElementById('featured-grid');
         const recsGrid = document.getElementById('recs-grid');
-        const viewTitle = document.getElementById('view-title');
         const loader = document.getElementById('loader');
         const audio = document.getElementById('main-audio');
         const masterPlayBtn = document.getElementById('master-play-btn');
@@ -308,9 +307,11 @@
                 if (data.access_token) {
                     accessToken = data.access_token;
                     onLoggedIn();
+                } else {
+                    console.error("Token exchange failed", data);
                 }
             } catch (err) {
-                console.error(err);
+                console.error("Token error:", err);
             } finally {
                 loader.classList.add('hidden');
             }
@@ -320,14 +321,14 @@
             document.getElementById('auth-section').innerHTML = `
                 <div class="bg-indigo-500/10 rounded-2xl p-5 border border-indigo-500/20 text-center">
                     <div class="flex items-center gap-3 mb-3">
-                        <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold">V</div>
+                        <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">V</div>
                         <div class="text-left">
                             <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Premium User</p>
                             <p class="text-sm font-bold text-white">Vzo Connected</p>
                         </div>
                     </div>
                     <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div class="w-2/3 h-full bg-indigo-500"></div>
+                        <div class="w-full h-full bg-indigo-500"></div>
                     </div>
                 </div>
             `;
@@ -342,26 +343,61 @@
         }
 
         async function loadHomeData() {
-            // Fetch multiple categories for the home screen
-            const featured = await spotifyFetch('search?q=lofi%20beats&type=track&limit=5');
-            const recommendations = await spotifyFetch('search?q=year:2024&type=track&limit=10');
+            if (!accessToken) return;
             
-            if (featured) displayTracks(featured.tracks.items, featuredGrid);
-            if (recommendations) displayTracks(recommendations.tracks.items, recsGrid);
+            // Show loaders in the specific grids
+            featuredGrid.innerHTML = '<div class="col-span-full py-10 text-center text-zinc-600">Syncing Featured...</div>';
+            recsGrid.innerHTML = '<div class="col-span-full py-10 text-center text-zinc-600">Picking for you...</div>';
+
+            try {
+                // Fetch two different "moods" for the home page
+                const [featured, recommendations] = await Promise.all([
+                    spotifyFetch('search?q=lofi%20beats&type=track&limit=10'),
+                    spotifyFetch('search?q=popular%202025&type=track&limit=15')
+                ]);
+                
+                if (featured && featured.tracks) {
+                    displayTracks(featured.tracks.items, featuredGrid);
+                } else {
+                    featuredGrid.innerHTML = '<div class="col-span-full text-zinc-500">Could not load mixes.</div>';
+                }
+
+                if (recommendations && recommendations.tracks) {
+                    displayTracks(recommendations.tracks.items, recsGrid);
+                } else {
+                    recsGrid.innerHTML = '<div class="col-span-full text-zinc-500">Could not load recommendations.</div>';
+                }
+            } catch (e) {
+                console.error("Home load error", e);
+            }
         }
 
         async function spotifyFetch(endpoint) {
             if (!accessToken) return null;
-            const res = await fetch(`https://api.spotify.org/v1/${endpoint}`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            return res.json();
+            try {
+                const res = await fetch(`https://api.spotify.org/v1/${endpoint}`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        // Potential token expiry - simple app just asks to re-login
+                        showToast("Session expired. Please refresh.");
+                    }
+                    return null;
+                }
+                return await res.json();
+            } catch (err) {
+                console.error("Fetch failed", err);
+                return null;
+            }
         }
 
+        let searchTimeout;
         searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
             const query = e.target.value.trim();
             if (query.length > 2) {
-                searchTracks(query);
+                searchTimeout = setTimeout(() => searchTracks(query), 400);
             } else if (query.length === 0) {
                 showHome();
             }
@@ -371,41 +407,47 @@
             if (!accessToken) return;
             homeView.classList.add('hidden');
             searchView.classList.remove('hidden');
-            loader.classList.remove('hidden');
-            resultsGrid.innerHTML = '';
+            resultsGrid.innerHTML = '<div class="col-span-full py-20 text-center text-zinc-500 animate-pulse">Searching the catalog...</div>';
             
             try {
-                const data = await spotifyFetch(`search?q=${encodeURIComponent(query)}&type=track&limit=20`);
-                if (data && data.tracks) {
+                const data = await spotifyFetch(`search?q=${encodeURIComponent(query)}&type=track&limit=30`);
+                if (data && data.tracks && data.tracks.items.length > 0) {
                     displayTracks(data.tracks.items, resultsGrid);
+                } else {
+                    resultsGrid.innerHTML = '<div class="col-span-full py-20 text-center text-zinc-500">No tracks found. Try something else.</div>';
                 }
             } catch (err) {
-                console.error(err);
-            } finally {
-                loader.classList.add('hidden');
+                resultsGrid.innerHTML = '<div class="col-span-full py-20 text-center text-red-500/50">Search failed. Check connection.</div>';
             }
         }
 
         function displayTracks(tracks, targetElement) {
-            targetElement.innerHTML = tracks.map(track => `
-                <div onclick="playTrack('${track.preview_url}', '${track.name.replace(/'/g, "\\'")}', '${track.artists[0].name.replace(/'/g, "\\'")}', '${track.album.images[0]?.url}', '${track.id}')" 
+            if (!tracks || tracks.length === 0) {
+                targetElement.innerHTML = '<div class="col-span-full text-zinc-600 py-10">No items available.</div>';
+                return;
+            }
+            targetElement.innerHTML = tracks.map(track => {
+                const preview = track.preview_url;
+                const hasPreview = !!preview && preview !== 'null';
+                return `
+                <div onclick="playTrack('${preview}', '${track.name.replace(/'/g, "\\'")}', '${track.artists[0].name.replace(/'/g, "\\'")}', '${track.album.images[0]?.url}', '${track.id}')" 
                      class="spotify-card group p-5 rounded-2xl transition-all cursor-pointer">
                     <div class="relative mb-4 aspect-square">
-                        <img src="${track.album.images[0]?.url || 'https://via.placeholder.com/300'}" class="rounded-xl object-cover w-full h-full shadow-lg" />
-                        <div class="play-btn-overlay absolute bottom-3 right-3 w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center shadow-xl">
-                            <i class="fas fa-play text-white text-sm ml-0.5"></i>
+                        <img src="${track.album.images[0]?.url || 'https://via.placeholder.com/300'}" class="rounded-xl object-cover w-full h-full shadow-lg bg-zinc-800" />
+                        <div class="play-btn-overlay absolute bottom-3 right-3 w-12 h-12 ${hasPreview ? 'bg-indigo-500' : 'bg-zinc-700'} rounded-full flex items-center justify-center shadow-xl">
+                            <i class="fas fa-${hasPreview ? 'play ml-0.5' : 'lock'} text-white text-sm"></i>
                         </div>
                     </div>
                     <h3 class="font-bold truncate text-sm text-white mb-1">${track.name}</h3>
                     <p class="text-zinc-500 text-xs truncate font-medium">${track.artists[0].name}</p>
-                    ${!track.preview_url ? '<div class="mt-2 text-[9px] font-bold text-zinc-700 bg-white/5 inline-block px-2 py-0.5 rounded">NO PREVIEW</div>' : ''}
+                    ${!hasPreview ? '<div class="mt-2 text-[9px] font-bold text-zinc-700 bg-white/5 inline-block px-2 py-0.5 rounded tracking-tighter">RESTRICTED</div>' : ''}
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function playTrack(url, title, artist, img, id) {
             if (!url || url === 'null') {
-                showToast("Track preview is restricted by Spotify.");
+                showToast("Full track required. This is a restricted preview.");
                 return;
             }
             if (currentTrackId === id) {
@@ -437,10 +479,16 @@
 
         function showToast(msg) {
             const toast = document.createElement('div');
-            toast.className = "fixed bottom-32 left-1/2 -translate-x-1/2 bg-zinc-900 border border-white/10 px-6 py-3 rounded-full text-xs font-bold text-white shadow-2xl z-50 animate-bounce";
+            toast.className = "fixed bottom-32 left-1/2 -translate-x-1/2 bg-zinc-900 border border-white/10 px-6 py-3 rounded-full text-xs font-bold text-white shadow-2xl z-50 transition-all transform scale-90";
             toast.innerText = msg;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            setTimeout(() => {
+                toast.classList.add('scale-100');
+            }, 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         masterPlayBtn.addEventListener('click', togglePlay);

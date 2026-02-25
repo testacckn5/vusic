@@ -201,24 +201,23 @@
                     onLoggedIn();
                 } else if (params.get('error')) {
                     const errorMsg = params.get('error');
-                    viewTitle.innerHTML = `<span class="text-red-500">Error: ${errorMsg}</span><br><span class="text-sm font-normal text-zinc-500">Make sure Implicit Grant is supported by your Client ID.</span>`;
+                    viewTitle.innerHTML = `<span class="text-red-500">Error: ${errorMsg}</span><br><span class="text-sm font-normal text-zinc-500">Spotify Dashboard Checklist:<br>1. Redirect URI matches exactly.<br>2. You are added in "User Management".<br>3. Check "Web API" and "Web Playback SDK" settings.</span>`;
                     console.error("Spotify Auth Error:", errorMsg);
                 }
             }
         });
 
-        // Login Logic - Using direct URL string with strict parameter ordering
+        // Login Logic - Strictly ordered to trigger Implicit Grant
         loginBtn.addEventListener('click', () => {
-            // response_type=token triggers Implicit Grant automatically
-            const params = [
-                `client_id=${CLIENT_ID}`,
-                `redirect_uri=${encodeURIComponent(REDIRECT_URI)}`,
-                `response_type=token`,
-                `scope=${encodeURIComponent(SCOPES)}`,
-                `show_dialog=true`
-            ].join('&');
+            const params = new URLSearchParams({
+                client_id: CLIENT_ID,
+                redirect_uri: REDIRECT_URI,
+                response_type: 'token',
+                scope: SCOPES,
+                show_dialog: 'true'
+            });
             
-            window.location.href = `${AUTH_ENDPOINT}?${params}`;
+            window.location.href = `${AUTH_ENDPOINT}?${params.toString()}`;
         });
 
         function onLoggedIn() {
